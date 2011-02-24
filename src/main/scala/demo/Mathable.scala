@@ -2,8 +2,7 @@ package demo
 
 import scala.math
 
-//trait Mathable[@specialized A] extends Convertable[A] with Ordering[A] {
-trait Mathable[@specialized A] extends Convertable[A] {
+trait Mathable[@specialized A] extends Convertable[A] with Ordering[A] {
   def abs(a:A): A
   override def compare(a:A, b:A): Int = if (lt(a, b)) -1 else if (gt(a, b)) 1 else 0
   def div(a:A, b:A): A
