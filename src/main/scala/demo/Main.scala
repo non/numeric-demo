@@ -13,6 +13,7 @@ import demo.Numeric3.{numeric,infixNumericOps}
 object Constant {
   val SM_SIZE  = 1000
   val MD_SIZE  = 100000
+  val ML_SIZE  = 1000000
   val LG_SIZE  = 10000000
 
   val SM_DATA  = Array.ofDim[Int](SM_SIZE).map { i => Random.nextInt(1000) }
@@ -83,12 +84,12 @@ class ToDoubles extends TestCase[Array[Double]] {
   }
   def direct = Some(directToDouble(LG_DATA))
 
-  def newToDouble[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
+  def newToDouble[@specialized A:Numeric3](a:Array[A]) = {
     val len = a.length
     val b = Array.ofDim[Double](len)
     var i = 0
     while (i < len) {
-      b(i) = m.toDouble(a(i))
+      b(i) = numeric.toDouble(a(i))
       i += 1
     }
     b
@@ -124,17 +125,17 @@ class FromInts extends TestCase[Array[Double]] {
   }
   def direct = Some(directFromInts(LG_DATA))
 
-  def newFromInts[@specialized A](a:Array[Int])(implicit m:Numeric3[A], c:Manifest[A]): Array[A] = {
+  def newFromInts[@specialized A:Numeric3:Manifest](a:Array[Int]): Array[A] = {
     val len = a.length
     val b = Array.ofDim[A](len)
     var i = 0
     while (i < len) {
-      b(i) = m.fromInt(a(i))
+      b(i) = numeric.fromInt(a(i))
       i += 1
     }
     b
   }
-  def newGeneric = Some(newFromInts(LG_DATA))
+  def newGeneric = Some(newFromInts[Double](LG_DATA))
 
   def oldFromInts[A](a:Array[Int])(implicit m:Numeric[A], c:Manifest[A]): Array[A] = {
     val len = a.length
@@ -164,7 +165,7 @@ class Addition extends TestCase[Long] {
     Some(s)
   }
 
-  def newAdder[@specialized A](a:A, b:A)(implicit m:Numeric3[A]): A = m.plus(a, b)
+  def newAdder[@specialized A:Numeric3](a:A, b:A): A = numeric.plus(a, b)
   def newGeneric = {
     var s = 0L
     var i = 0L
@@ -203,12 +204,12 @@ class Addition2 extends TestCase[Int] {
   }
   def direct = Some(directAdder(LG_DATA))
 
-  def newAdder[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
-    var total = m.zero
+  def newAdder[@specialized A:Numeric3](a:Array[A]) = {
+    var total = numeric.zero
     val len = a.length
     var i = 0
     while (i < len) {
-      total = m.plus(total, a(i))
+      total = numeric.plus(total, a(i))
       i += 1
     }
     total
@@ -283,8 +284,8 @@ class Rescale extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newScale[@specialized A](a:A, num:A, denom:A)(implicit m:Numeric3[A]) = {
-    m.div(m.times(a, num), denom)
+  def newScale[@specialized A:Numeric3](a:A, num:A, denom:A) = {
+    numeric.div(numeric.times(a, num), denom)
   }
   def newGeneric = {
     var i = 0
@@ -325,7 +326,7 @@ class FindMax extends TestCase[Int] {
     Some(curr)
   }
 
-  def newMax[@specialized A](a:A, b:A)(implicit m:Numeric3[A]): A = m.max(a, b)
+  def newMax[@specialized A:Numeric3](a:A, b:A): A = numeric.max(a, b)
   def newGeneric = {
     var curr = LG_DATA(0)
     var i = 1
@@ -364,12 +365,12 @@ class FindMax2 extends TestCase[Int] {
   }
   def direct = directFindMax(LG_DATA)
 
-  def newFindMax[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
+  def newFindMax[@specialized A:Numeric3:Manifest](a:Array[A]) = {
     var curr = a(0)
     val len = a.length
     var i = 1
     while (i < len) {
-      curr = m.max(curr, a(i))
+      curr = numeric.max(curr, a(i))
       i += 1
     }
     Some(curr)
@@ -445,14 +446,14 @@ class InsertionSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newIsort[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) {
+  def newIsort[@specialized A:Numeric3:Manifest](a:Array[A]) {
     var i = 0
     val last = a.length - 1
     while (i < last) {
       var j = i + 1
       var k = i
       while (j <= last) {
-        if (m.lt(a(j), a(i))) k = j
+        if (numeric.lt(a(j), a(i))) k = j
         j += 1
       }
       val temp = a(i)
@@ -488,6 +489,43 @@ class InsertionSort extends TestCase[Array[Int]] {
     oldIsort(data2)
     Some(data2)
   }
+}
+
+class ArrayAllocator extends TestCase[Array[Array[Int]]] {
+  def name = "array-allocator"
+
+  def directAllocator(num:Int, dim:Int, const:Int) = {
+    val outer = Array.ofDim[Array[Int]](num)
+    var i = 0
+    while (i < num) {
+      outer(i) = Array.fill(dim)(const)
+      i += 1
+    }
+    outer
+  }
+  def direct = Some(directAllocator(ML_SIZE, 5, 13))
+
+  def newAllocator[@specialized A:Numeric3:Manifest](num:Int, dim:Int, const:A) = {
+    val outer = Array.ofDim[Array[A]](num)
+    var i = 0
+    while (i < num) {
+      outer(i) = Array.fill(dim)(const)
+      i += 1
+    }
+    outer
+  }
+  def newGeneric = Some(newAllocator(ML_SIZE, 5, 13))
+
+  def oldAllocator[A](num:Int, dim:Int, const:A)(implicit m:Numeric[A], c:Manifest[A]) = {
+    val outer = Array.ofDim[Array[A]](num)
+    var i = 0
+    while (i < num) {
+      outer(i) = Array.fill(dim)(const)
+      i += 1
+    }
+    outer
+  }
+  def oldGeneric = Some(oldAllocator(ML_SIZE, 5, 13))
 }
 
 // use a merge sort to sort an Array[A] in place, where A=Int
@@ -535,7 +573,7 @@ class MergeSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newMsort[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) {
+  def newMsort[@specialized A:Numeric3:Manifest](a:Array[A]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2
@@ -559,7 +597,7 @@ class MergeSort extends TestCase[Array[Int]] {
         } else if (i == llen) {
           a(k) = right(j)
           j += 1
-        } else if (m.lt(left(i), right(j))) {
+        } else if (numeric.lt(left(i), right(j))) {
           a(k) = left(i)
           i += 1
         } else {
@@ -623,6 +661,7 @@ object Main {
                    new Addition2,
                    new ToDoubles,
                    new FromInts,
+                   new ArrayAllocator,
                    new Rescale,
                    new Quicksort,
                    new InsertionSort,
