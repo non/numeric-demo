@@ -1,5 +1,13 @@
 package demo
 
+// this package is used to provide concrete implementations of the conversions
+// between numeric primitives. the idea here is that the Numeric trait can
+// extend this to inherit the conversions.
+
+// we can also use these implementations to provide a way to convert from
+// A -> B, where both A and B are generic Numeric types. without a separate
+// trait, the compiler will die on circular references.
+
 trait Convertable[@specialized A] {
   def toByte(a:A): Byte
   def toShort(a:A): Short
