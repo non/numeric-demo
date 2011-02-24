@@ -6,16 +6,19 @@ import scala.util.Random
 
 import Console.printf
 
+import demo.Numeric3.{numeric,infixNumericOps}
+
 // define some constant sizes and random arrays that we can use for our various
 // performance tests
 object Constant {
   val SM_SIZE  = 1000
   val MD_SIZE  = 100000
-  val LG_SIZE  = 1000000
+  val LG_SIZE  = 10000000
 
   val SM_DATA  = Array.ofDim[Int](SM_SIZE).map { i => Random.nextInt(1000) }
   val MD_DATA  = Array.ofDim[Int](MD_SIZE).map { i => Random.nextInt(1000) }
   val LG_DATA  = Array.ofDim[Int](LG_SIZE).map { i => Random.nextInt(1000) }
+  val LG_DATA2  = Array.ofDim[Int](LG_SIZE).map { i => Random.nextInt(1000) }
 }
 import Constant._
 
@@ -223,6 +226,46 @@ class Addition2 extends TestCase[Int] {
     total
   }
   def oldGeneric = Some(oldAdder(LG_DATA))
+}
+
+
+// using numeric() instead of implicitly[Numeric3[A]]
+// see Numeric3 numeric()  
+class Addition3 extends Addition2 {
+  override def name = "addition3, using numeric() instead of implicitly()"
+
+  override def newGeneric = Some(newSyntaxAdder(LG_DATA))
+  def newSyntaxAdder[@specialized A:Numeric3](a:Array[A]) = { 
+    var total = numeric.zero
+    val len = a.length
+    var i = 0
+    while (i < len) {
+      total = numeric.plus(total, a(i))
+      i += 1
+    }
+    total
+  }
+}
+
+
+// testing demo.Numeric3.infixNumericOps, an implicit conversion 
+// that allows infix operators to be used
+
+class AdditionInfix extends Addition2 {
+  override def name = "addition with infix"
+
+  override def newGeneric = Some(infixAdder(LG_DATA))
+
+  def infixAdder[@specialized A:Numeric3](a:Array[A]) = {
+    var total = numeric.zero
+    val len = a.length
+    var i = 0
+    while (i < len) {
+      total = total + a(i)
+      i += 1
+    }
+    total
+  }
 }
 
 // Scaling an Array[A] by 5/3, where A=Int
@@ -585,7 +628,9 @@ object Main {
                    new InsertionSort,
                    new MergeSort,
                    new FindMax,
-                   new FindMax2)
+                   new FindMax2,
+                   new Addition3,
+                   new AdditionInfix)
   
   def main(args:Array[String]): Unit = tests.foreach(_.test)
 }

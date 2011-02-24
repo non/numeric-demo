@@ -52,9 +52,18 @@ trait Numeric3[@specialized A] extends Convertable[A] {
   }
 
   implicit def mkNumeric3Ops(lhs:A): Ops = new Ops(lhs)
+
 }
 
 object Numeric3 {
+
+  //@inline
+  implicit def infixNumericOps[T](x: T) (implicit num:Numeric3[T]):Numeric3[T]#Ops = new num.Ops(x)
+
+  //@inline
+  def numeric[A:Numeric3]() = { implicitly [Numeric3[A]] }
+ 
+
   trait Numeric3Byte extends Numeric3[Byte] with Convertable.ConvertableByte {
     def abs(a:Byte): Byte = scala.math.abs(a).toByte
     def div(a:Byte, b:Byte): Byte = (a / b).toByte
