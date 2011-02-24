@@ -2,7 +2,7 @@ package demo
 
 import scala.math
 
-trait Mathable[@specialized A] extends Convertable[A] with Ordering[A] {
+trait Numeric2[@specialized A] extends Convertable[A] with Ordering[A] {
   def abs(a:A): A
   override def compare(a:A, b:A): Int = if (lt(a, b)) -1 else if (gt(a, b)) 1 else 0
   def div(a:A, b:A): A
@@ -25,37 +25,37 @@ trait Mathable[@specialized A] extends Convertable[A] with Ordering[A] {
   def fromType[B](b:B)(implicit c:Convertable[B]): A
 
   class Ops(lhs:A) {
-    def abs(): A = Mathable.this.abs(lhs)
-    def compare(rhs:A) = Mathable.this.compare(lhs, rhs)
+    def abs(): A = Numeric2.this.abs(lhs)
+    def compare(rhs:A) = Numeric2.this.compare(lhs, rhs)
     def /(rhs:A) = div(lhs, rhs)
-    def equiv(rhs:A) = Mathable.this.equiv(lhs, rhs)
+    def equiv(rhs:A) = Numeric2.this.equiv(lhs, rhs)
     def >(rhs:A) = gt(lhs, rhs)
     def >=(rhs:A) = gteq(lhs, rhs)
     def <(rhs:A) = lt(lhs, rhs)
     def <=(rhs:A) = lteq(lhs, rhs)
-    def max(rhs:A): A = Mathable.this.max(lhs, rhs)
-    def min(rhs:A): A = Mathable.this.min(lhs, rhs)
+    def max(rhs:A): A = Numeric2.this.max(lhs, rhs)
+    def min(rhs:A): A = Numeric2.this.min(lhs, rhs)
     def -(rhs:A) = minus(lhs, rhs)
     def %(rhs:A) = mod(lhs, rhs)
     def unary_-() = negate(lhs)
-    def plus(rhs:A) = Mathable.this.plus(lhs, rhs)
-    def +(rhs:A) = Mathable.this.plus(lhs, rhs)
-    def signum(): Int = Mathable.this.signum(lhs)
+    def plus(rhs:A) = Numeric2.this.plus(lhs, rhs)
+    def +(rhs:A) = Numeric2.this.plus(lhs, rhs)
+    def signum(): Int = Numeric2.this.signum(lhs)
     def *(rhs:A) = times(lhs, rhs)
   
-    def toByte(): Byte = Mathable.this.toByte(lhs)
-    def toShort(): Short = Mathable.this.toShort(lhs)
-    def toInt(): Int = Mathable.this.toInt(lhs)
-    def toLong(): Long = Mathable.this.toLong(lhs)
-    def toFloat(): Float = Mathable.this.toFloat(lhs)
-    def toDouble(): Double = Mathable.this.toDouble(lhs)    
+    def toByte(): Byte = Numeric2.this.toByte(lhs)
+    def toShort(): Short = Numeric2.this.toShort(lhs)
+    def toInt(): Int = Numeric2.this.toInt(lhs)
+    def toLong(): Long = Numeric2.this.toLong(lhs)
+    def toFloat(): Float = Numeric2.this.toFloat(lhs)
+    def toDouble(): Double = Numeric2.this.toDouble(lhs)    
   }
 
-  implicit def mkMathableOps(lhs:A): Ops = new Ops(lhs)
+  implicit def mkNumeric2Ops(lhs:A): Ops = new Ops(lhs)
 }
 
-object Mathable {
-  trait MathableByte extends Mathable[Byte] with Convertable.ConvertableByte {
+object Numeric2 {
+  trait Numeric2Byte extends Numeric2[Byte] with Convertable.ConvertableByte {
     def abs(a:Byte): Byte = scala.math.abs(a).toByte
     def div(a:Byte, b:Byte): Byte = (a / b).toByte
     override def equiv(a:Byte, b:Byte): Boolean = a == b
@@ -75,9 +75,9 @@ object Mathable {
 
     def fromType[B](b:B)(implicit c:Convertable[B]) = c.toByte(b)
   }
-  implicit object MathableByte extends MathableByte
+  implicit object Numeric2Byte extends Numeric2Byte
 
-  trait MathableShort extends Mathable[Short] with Convertable.ConvertableShort {
+  trait Numeric2Short extends Numeric2[Short] with Convertable.ConvertableShort {
     def abs(a:Short): Short = scala.math.abs(a).toShort
     def div(a:Short, b:Short): Short = (a / b).toShort
     override def equiv(a:Short, b:Short): Boolean = a == b
@@ -97,9 +97,9 @@ object Mathable {
     
     def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toShort(b)
   }
-  implicit object MathableShort extends MathableShort
+  implicit object Numeric2Short extends Numeric2Short
   
-  trait MathableInt extends Mathable[Int] with Convertable.ConvertableInt {
+  trait Numeric2Int extends Numeric2[Int] with Convertable.ConvertableInt {
     def abs(a:Int): Int = scala.math.abs(a)
     def div(a:Int, b:Int): Int = a / b
     override def equiv(a:Int, b:Int): Boolean = a == b
@@ -119,9 +119,9 @@ object Mathable {
   
     def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toInt(b)
   }
-  implicit object MathableInt extends MathableInt
+  implicit object Numeric2Int extends Numeric2Int
   
-  trait MathableLong extends Mathable[Long] with Convertable.ConvertableLong {
+  trait Numeric2Long extends Numeric2[Long] with Convertable.ConvertableLong {
     def abs(a:Long): Long = scala.math.abs(a)
     def div(a:Long, b:Long): Long = a / b
     override def equiv(a:Long, b:Long): Boolean = a == b
@@ -141,9 +141,9 @@ object Mathable {
   
     def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toLong(b)
   }
-  implicit object MathableLong extends MathableLong
+  implicit object Numeric2Long extends Numeric2Long
   
-  trait MathableFloat extends Mathable[Float] with Convertable.ConvertableFloat {
+  trait Numeric2Float extends Numeric2[Float] with Convertable.ConvertableFloat {
     def abs(a:Float): Float = scala.math.abs(a)
     def div(a:Float, b:Float): Float = a / b
     override def equiv(a:Float, b:Float): Boolean = a == b
@@ -163,9 +163,9 @@ object Mathable {
   
     def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toFloat(b)
   }
-  implicit object MathableFloat extends MathableFloat
+  implicit object Numeric2Float extends Numeric2Float
   
-  trait MathableDouble extends Mathable[Double] with Convertable.ConvertableDouble {
+  trait Numeric2Double extends Numeric2[Double] with Convertable.ConvertableDouble {
     def abs(a:Double): Double = scala.math.abs(a)
     def div(a:Double, b:Double): Double = a / b
     override def equiv(a:Double, b:Double): Boolean = a == b
@@ -185,6 +185,6 @@ object Mathable {
   
     def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toDouble(b)
   }
-  implicit object MathableDouble extends MathableDouble
+  implicit object Numeric2Double extends Numeric2Double
 
 }

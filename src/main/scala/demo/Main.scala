@@ -6,86 +6,189 @@ import scala.util.Random
 
 import Console.printf
 
+// define some constant sizes and random arrays that we can use for our various
+// performance tests
 object Constant {
-  val SM_SIZE  = 100000
-  val SM_DATA  = Array.ofDim[Int](SM_SIZE).map { i => Random.nextInt(1000) }
-
+  val SM_SIZE  = 1000
+  val MD_SIZE  = 100000
   val LG_SIZE  = 1000000
+
+  val SM_DATA  = Array.ofDim[Int](SM_SIZE).map { i => Random.nextInt(1000) }
+  val MD_DATA  = Array.ofDim[Int](MD_SIZE).map { i => Random.nextInt(1000) }
   val LG_DATA  = Array.ofDim[Int](LG_SIZE).map { i => Random.nextInt(1000) }
 }
-
 import Constant._
 
+// represents a particular performance test we want to run
 trait TestCase[A] {
   def name: String
 
-  def direct: A
-  def generic: A
-  def numeric: A
+  // direct implementation using primitives
+  def direct: Option[A]
 
+  // implemented using the new Numeric3 trait
+  def newGeneric: Option[A]
+
+  // implemented using the built-in Numeric trait
+  def oldGeneric: Option[A]
+
+  // race our various implementations and display results
   def test {
     println(name)
 
     // warm up run
     this.direct
-    this.generic
-    this.numeric
+    this.newGeneric
+    this.oldGeneric
+
+    // warm up run #2
+    this.direct
+    this.newGeneric
+    this.oldGeneric
 
     // timed run
     time("direct", direct)
-    time("generic", generic)
-    time("numeric", numeric)
+    time("new-numeric", newGeneric)
+    time("old-numeric", oldGeneric)
   }
 
+  // used to time a particular implementation
   def time[A](label:String, x: => A) {
     val start = System.currentTimeMillis
     val r = x
     val duration = System.currentTimeMillis - start
-    printf("  %-8s %d ms\n", label, duration)
+    r match {
+      case None => printf("  %-12s     n/a\n", label)
+      case Some(a) => printf("  %-12s %4d ms\n", label, duration)
+    }
   }
 }
 
+// converting Array[A] -> Array[Double], where A=Int
+class ToDoubles extends TestCase[Array[Double]] {
+  def name = "to-double"
+
+  def directToDouble(a:Array[Int]) = {
+    val len = a.length
+    val b = Array.ofDim[Double](len)
+    var i = 0
+    while (i < len) {
+      b(i) = a(i).toDouble
+      i += 1
+    }
+    b
+  }
+  def direct = Some(directToDouble(LG_DATA))
+
+  def newToDouble[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
+    val len = a.length
+    val b = Array.ofDim[Double](len)
+    var i = 0
+    while (i < len) {
+      b(i) = m.toDouble(a(i))
+      i += 1
+    }
+    b
+  }
+  def newGeneric = Some(newToDouble(LG_DATA))
+
+  def oldToDouble[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+    val len = a.length
+    val b = Array.ofDim[Double](len)
+    var i = 0
+    while (i < len) {
+      b(i) = m.toDouble(a(i))
+      i += 1
+    }
+    b
+  }
+  def oldGeneric = Some(oldToDouble(LG_DATA))
+}
+
+// converting Array[Int] -> Array[A], where A=Double
+class FromInts extends TestCase[Array[Double]] {
+  def name = "from-ints"
+
+  def directFromInts(a:Array[Int]) = {
+    val len = a.length
+    val b = Array.ofDim[Double](len)
+    var i = 0
+    while (i < len) {
+      b(i) = a(i).toDouble
+      i += 1
+    }
+    b
+  }
+  def direct = Some(directFromInts(LG_DATA))
+
+  def newFromInts[@specialized A](a:Array[Int])(implicit m:Numeric3[A], c:Manifest[A]): Array[A] = {
+    val len = a.length
+    val b = Array.ofDim[A](len)
+    var i = 0
+    while (i < len) {
+      b(i) = m.fromInt(a(i))
+      i += 1
+    }
+    b
+  }
+  def newGeneric = Some(newFromInts(LG_DATA))
+
+  def oldFromInts[A](a:Array[Int])(implicit m:Numeric[A], c:Manifest[A]): Array[A] = {
+    val len = a.length
+    val b = Array.ofDim[A](len)
+    var i = 0
+    while (i < len) {
+      b(i) = m.fromInt(a(i))
+      i += 1
+    }
+    b
+  }
+  def oldGeneric = Some(oldFromInts(LG_DATA))
+}
+
+// Adding many A values together, where A=Long
 class Addition extends TestCase[Long] {
   def name = "addition"
 
-  def adder(a:Long, b:Long) = a + b
+  def directAdder(a:Long, b:Long) = a + b
   def direct = {
     var s = 0L
     var i = 0L
     while (i < LG_SIZE) {
-      s = adder(s, i)
+      s = directAdder(s, i)
       i += 1L
     }
-    s
+    Some(s)
   }
 
-  def gadder[@specialized A](a:A, b:A)(implicit m:MathableB[A]): A = m.plus(a, b)
-  def generic = {
+  def newAdder[@specialized A](a:A, b:A)(implicit m:Numeric3[A]): A = m.plus(a, b)
+  def newGeneric = {
     var s = 0L
     var i = 0L
     while (i < LG_SIZE) {
-      s = gadder(s, i)
+      s = newAdder(s, i)
       i += 1L
     }
-    s
+    Some(s)
   }
 
-  def nadder[A](a:A, b:A)(implicit m:Numeric[A]): A = m.plus(a, b)
-  def numeric = {
+  def oldAdder[A](a:A, b:A)(implicit m:Numeric[A]): A = m.plus(a, b)
+  def oldGeneric = {
     var s = 0L
     var i = 0L
     while (i < LG_SIZE) {
-      s = nadder(s, i)
+      s = oldAdder(s, i)
       i += 1L
     }
-    s
+    Some(s)
   }
 }
 
+// adding an Array[A] together, where A=Int
 class Addition2 extends TestCase[Int] {
   def name = "addition2"
 
-  def adder(a:Array[Int]) = {
+  def directAdder(a:Array[Int]) = {
     var total = 0
     val len = a.length
     var i = 0
@@ -95,9 +198,9 @@ class Addition2 extends TestCase[Int] {
     }
     total
   }
-  def direct = adder(LG_DATA)
+  def direct = Some(directAdder(LG_DATA))
 
-  def gadder[@specialized A](a:Array[A])(implicit m:MathableB[A], c:Manifest[A]) = {
+  def newAdder[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
     var total = m.zero
     val len = a.length
     var i = 0
@@ -107,9 +210,9 @@ class Addition2 extends TestCase[Int] {
     }
     total
   }
-  def generic = gadder(LG_DATA)
+  def newGeneric = Some(newAdder(LG_DATA))
 
-  def nadder[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+  def oldAdder[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
     var total = m.zero
     val len = a.length
     var i = 0
@@ -119,116 +222,236 @@ class Addition2 extends TestCase[Int] {
     }
     total
   }
-  def numeric = nadder(LG_DATA)
+  def oldGeneric = Some(oldAdder(LG_DATA))
 }
 
+// Scaling an Array[A] by 5/3, where A=Int
 class Rescale extends TestCase[Array[Int]] {
   def name = "rescale"
 
-  def scale(a:Int, num:Int, denom:Int) = (a * num) / denom
+  def directScale(a:Int, num:Int, denom:Int) = (a * num) / denom
   def direct = {
     var i = 0
     val data2 = LG_DATA.clone
     while (i < LG_SIZE) {
-      data2(i) = scale(data2(i), 5, 3)
+      data2(i) = directScale(data2(i), 5, 3)
       i += 1
     }
-    data2
+    Some(data2)
   }
 
-  def gscale[@specialized A](a:A, num:A, denom:A)(implicit m:MathableB[A]): A = {
+  def newScale[@specialized A](a:A, num:A, denom:A)(implicit m:Numeric3[A]) = {
     m.div(m.times(a, num), denom)
   }
-  def generic = {
+  def newGeneric = {
     var i = 0
     val data2 = LG_DATA.clone
     while (i < LG_SIZE) {
-      data2(i) = gscale(data2(i), 5, 3)
+      data2(i) = newScale(data2(i), 5, 3)
       i += 1
     }
-    data2
+    Some(data2)
   }
 
-  def nscale[A](a:A, num:A, denom:A)(implicit m:Integral[A]): A = {
+  def oldScale[A](a:A, num:A, denom:A)(implicit m:Integral[A]): A = {
     m.quot(m.times(a, num), denom)
   }
-  def numeric = {
+  def oldGeneric = {
     var i = 0
     val data2 = LG_DATA.clone
     while (i < LG_SIZE) {
-      data2(i) = nscale(data2(i), 5, 3)
+      data2(i) = oldScale(data2(i), 5, 3)
       i += 1
     }
-    data2
+    Some(data2)
   }
 }
 
+// Finding the maximum value in Array[A], where A=Int
 class FindMax extends TestCase[Int] {
-  def name = "findmax"
+  def name = "find-max"
 
-  def dmax(a:Int, b:Int) = scala.math.max(a, b)
+  def directMax(a:Int, b:Int) = scala.math.max(a, b)
   def direct = {
     var curr = LG_DATA(0)
     var i = 1
     while (i < LG_SIZE) {
-      curr = dmax(curr, LG_DATA(i))
+      curr = directMax(curr, LG_DATA(i))
       i += 1
     }
-    curr
+    Some(curr)
   }
 
-  def gmax[@specialized A](a:A, b:A)(implicit m:MathableB[A]): A = m.max(a, b)
-  def generic = {
+  def newMax[@specialized A](a:A, b:A)(implicit m:Numeric3[A]): A = m.max(a, b)
+  def newGeneric = {
     var curr = LG_DATA(0)
     var i = 1
     while (i < LG_SIZE) {
-      curr = gmax(curr, LG_DATA(i))
+      curr = newMax(curr, LG_DATA(i))
       i += 1
     }
-    curr
+    Some(curr)
   }
 
-  def nmax[A](a:A, b:A)(implicit m:Numeric[A]): A = m.max(a, b)
-  def numeric = {
+  def oldMax[A](a:A, b:A)(implicit m:Numeric[A]): A = m.max(a, b)
+  def oldGeneric = {
     var curr = LG_DATA(0)
     var i = 1
     while (i < LG_SIZE) {
-      curr = nmax(curr, LG_DATA(i))
+      curr = oldMax(curr, LG_DATA(i))
       i += 1
     }
-    curr
+    Some(curr)
   }
 }
 
-//class Quicksort extends TestCase[Array[Int]] {
-//  def name = "quicksort"
-//
-//  def sort(a:Array[Int]): Unit = scala.util.Sorting.quickSort(a)
-//  def direct = {
-//    val data2 = SM_DATA.clone
-//    sort(data2)
-//    data2
-//  }
-//
-//  def gsort[@specialized A](a:Array[A])(implicit m:MathableB[A]): Unit = scala.util.Sorting.quickSort(a)
-//  def generic = {
-//    val data2 = SM_DATA.clone
-//    gsort(data2)
-//    data2
-//  }
-//
-//  def nsort[A](a:Array[A])(implicit m:Numeric[A]): Unit = scala.util.Sorting.quickSort(a)
-//  def numeric = {
-//    val data2 = SM_DATA.clone
-//    gsort(data2)
-//    data2
-//  }
-//}
+// Finding the maximum value in Array[A], where A=Int
+class FindMax2 extends TestCase[Int] {
+  def name = "find-max2"
 
+  def directFindMax(a:Array[Int]) = {
+    var curr = a(0)
+    val len = a.length
+    var i = 1
+    while (i < len) {
+      curr = max(curr, a(i))
+      i += 1
+    }
+    Some(curr)
+  }
+  def direct = directFindMax(LG_DATA)
+
+  def newFindMax[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) = {
+    var curr = a(0)
+    val len = a.length
+    var i = 1
+    while (i < len) {
+      curr = m.max(curr, a(i))
+      i += 1
+    }
+    Some(curr)
+  }
+  def newGeneric = newFindMax(LG_DATA)
+
+  def oldFindMax[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+    var curr = a(0)
+    val len = a.length
+    var i = 1
+    while (i < len) {
+      curr = m.max(curr, a(i))
+      i += 1
+    }
+    Some(curr)
+  }
+  def oldGeneric = oldFindMax(LG_DATA)
+}
+
+// use scala.util.Sorting.quickSort to sort an Array[A] in place, where A=Int
+class Quicksort extends TestCase[Array[Int]] {
+  def name = "quick-sort"
+
+  def directQuicksort(a:Array[Int]): Unit = scala.util.Sorting.quickSort(a)
+  def direct = {
+    val data2 = MD_DATA.clone
+    directQuicksort(data2)
+    Some(data2)
+  }
+
+  // unless we specialize Ordering (and scala.util.Sorting) we can't really
+  // test our new Numeric on this.
+
+  //def newQuicksort[@specialized A](a:Array[A])(implicit m:Numeric2[A]): Unit = scala.util.Sorting.quickSort(a)
+  //def newGeneric = {
+  //  val data2 = MD_DATA.clone
+  //  newQuicksort(data2)
+  //  data2
+  //}
+  def newGeneric = None
+
+  def oldQuicksort[A](a:Array[A])(implicit m:Numeric[A]): Unit = scala.util.Sorting.quickSort(a)
+  def oldGeneric = {
+    val data2 = MD_DATA.clone
+    oldQuicksort(data2)
+    Some(data2)
+  }
+}
+
+// use insertion sort to sort an Array[A] in place, where A=Int
+class InsertionSort extends TestCase[Array[Int]] {
+  def name = "insertion-sort"
+
+  def directIsort(a:Array[Int]) {
+    var i = 0
+    val last = a.length - 1
+    while (i < last) {
+      var j = i + 1
+      var k = i
+      while (j <= last) {
+        if (a(j) < a(i)) k = j
+        j += 1
+      }
+      val temp = a(i)
+      a(i) = a(k)
+      a(k) = temp
+      i += 1
+    }
+  }
+  def direct = {
+    val data2 = SM_DATA.clone
+    directIsort(data2)
+    Some(data2)
+  }
+
+  def newIsort[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) {
+    var i = 0
+    val last = a.length - 1
+    while (i < last) {
+      var j = i + 1
+      var k = i
+      while (j <= last) {
+        if (m.lt(a(j), a(i))) k = j
+        j += 1
+      }
+      val temp = a(i)
+      a(i) = a(k)
+      a(k) = temp
+      i += 1
+    }
+  }
+  def newGeneric = {
+    val data2 = SM_DATA.clone
+    newIsort(data2)
+    Some(data2)
+  }
+
+  def oldIsort[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) {
+    var i = 0
+    val last = a.length - 1
+    while (i < last) {
+      var j = i + 1
+      var k = i
+      while (j <= last) {
+        if (m.lt(a(j), a(i))) k = j
+        j += 1
+      }
+      val temp = a(i)
+      a(i) = a(k)
+      a(k) = temp
+      i += 1
+    }
+  }
+  def oldGeneric = {
+    val data2 = SM_DATA.clone
+    oldIsort(data2)
+    Some(data2)
+  }
+}
+
+// use a merge sort to sort an Array[A] in place, where A=Int
 class MergeSort extends TestCase[Array[Int]] {
-  def name = "mergesort"
+  def name = "merge-sort"
 
-  def msort(a:Array[Int]) {
+  def directMsort(a:Array[Int]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2
@@ -236,11 +459,11 @@ class MergeSort extends TestCase[Array[Int]] {
 
       val left  = Array.ofDim[Int](llen)
       Array.copy(a, 0, left, 0, llen)
-      msort(left)
+      directMsort(left)
   
       val right = Array.ofDim[Int](rlen)
       Array.copy(a, llen, right, 0, rlen)
-      msort(right)
+      directMsort(right)
 
       var i = 0
       var j = 0
@@ -264,12 +487,12 @@ class MergeSort extends TestCase[Array[Int]] {
     }
   }
   def direct = {
-    val data2 = SM_DATA.clone
-    msort(data2)
-    data2
+    val data2 = MD_DATA.clone
+    directMsort(data2)
+    Some(data2)
   }
 
-  def gmsort[@specialized A](a:Array[A])(implicit m:MathableB[A], c:Manifest[A]) {
+  def newMsort[@specialized A](a:Array[A])(implicit m:Numeric3[A], c:Manifest[A]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2
@@ -277,11 +500,11 @@ class MergeSort extends TestCase[Array[Int]] {
 
       val left  = Array.ofDim[A](llen)
       Array.copy(a, 0, left, 0, llen)
-      gmsort(left)
+      newMsort(left)
   
       val right = Array.ofDim[A](rlen)
       Array.copy(a, llen, right, 0, rlen)
-      gmsort(right)
+      newMsort(right)
 
       var i = 0
       var j = 0
@@ -304,13 +527,13 @@ class MergeSort extends TestCase[Array[Int]] {
       }
     }
   }
-  def generic  = {
-    val data2 = SM_DATA.clone
-    gmsort(data2)
-    data2
+  def newGeneric  = {
+    val data2 = MD_DATA.clone
+    newMsort(data2)
+    Some(data2)
   }
 
-  def nmsort[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) {
+  def oldMsort[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2
@@ -318,11 +541,11 @@ class MergeSort extends TestCase[Array[Int]] {
 
       val left  = Array.ofDim[A](llen)
       Array.copy(a, 0, left, 0, llen)
-      nmsort(left)
+      oldMsort(left)
   
       val right = Array.ofDim[A](rlen)
       Array.copy(a, llen, right, 0, rlen)
-      nmsort(right)
+      oldMsort(right)
 
       var i = 0
       var j = 0
@@ -345,20 +568,24 @@ class MergeSort extends TestCase[Array[Int]] {
       }
     }
   }
-  def numeric = {
-    val data2 = SM_DATA.clone
-    gmsort(data2)
-    data2
+  def oldGeneric = {
+    val data2 = MD_DATA.clone
+    oldMsort(data2)
+    Some(data2)
   }
 }
 
 object Main {
   val tests = List(new Addition,
                    new Addition2,
+                   new ToDoubles,
+                   new FromInts,
                    new Rescale,
-                   //new Quicksort,
+                   new Quicksort,
+                   new InsertionSort,
                    new MergeSort,
-                   new FindMax)
+                   new FindMax,
+                   new FindMax2)
   
   def main(args:Array[String]): Unit = tests.foreach(_.test)
 }
