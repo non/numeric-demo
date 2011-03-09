@@ -3,18 +3,17 @@ can get with a specialized Numeric trait. The file Numeric3.scala contains a
 fully specialized trait that already shows significant improvements over
 Numeric.
 
-You can run the performance tests by executing "sbt run"
+You can run the performance tests with "sbt run"
 
 Limitations:
 
-1. Generic arrays seem to impose a performance penalty in some situations...
-fixing that is probably beyond the scope of my (current) ablity. 
-
-2. Other packages (Ordering, scala.util.Sorting, etc.) also need specializion
+1. Other packages (Ordering, scala.util.Sorting, etc.) also need specializion
 (see the Quicksort performance test and Numeric2 for more information).
+Numeric3 does not currently extend Ordering. 
 
-3. The notation for using the specialized Numeric is annoying.
+2. The notation for using the specialized Numeric can be annoying.
 
-4. Using an implement constructor to build an object that has our Numeric
-traits functions defined on it defeats the purpose of using specialization to
-avoid boxing/unboxing.  
+3. Using an implicit to support infix math operators is nice but currently
+seems to impose a serious performance penalty. There have been reports that
+escape analysis should be able to detect and optimize this away, but so far
+this hasn't worked.  
