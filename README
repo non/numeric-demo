@@ -13,7 +13,9 @@ Numeric3 does not currently extend Ordering.
 
 2. The notation for using the specialized Numeric can be annoying.
 
-3. Using an implicit to support infix math operators is nice but currently
+3. Allocating generic arrays seems to be about 4x slower.
+
+4. Using an implicit to support infix math operators is nice but currently
 seems to impose a serious performance penalty. There have been reports that
 escape analysis should be able to detect and optimize this away, but so far
 this hasn't worked.  
