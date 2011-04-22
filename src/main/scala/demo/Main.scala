@@ -1,12 +1,12 @@
 package demo
 
 import scala.math.max
-import scala.math.{Numeric, Integral}
+import scala.math.{Numeric => OldNumeric, Integral}
 import scala.util.Random
 
 import Console.printf
 
-import demo.Numeric3.{numeric,infixNumericOps}
+import demo.Numeric.{numeric,infixNumericOps}
 
 // define some constant sizes and random arrays that we can use for our various
 // performance tests
@@ -30,7 +30,7 @@ trait TestCase[A] {
   // direct implementation using primitives
   def direct: Option[A]
 
-  // implemented using the new Numeric3 trait
+  // implemented using the new Numeric trait
   def newGeneric: Option[A]
 
   // implemented using the built-in Numeric trait
@@ -84,7 +84,7 @@ class ToDoubles extends TestCase[Array[Double]] {
   }
   def direct = Some(directToDouble(LG_DATA))
 
-  def newToDouble[@specialized A:Numeric3](a:Array[A]) = {
+  def newToDouble[@specialized A:Numeric](a:Array[A]) = {
     val len = a.length
     val b = Array.ofDim[Double](len)
     var i = 0
@@ -96,7 +96,7 @@ class ToDoubles extends TestCase[Array[Double]] {
   }
   def newGeneric = Some(newToDouble(LG_DATA))
 
-  def oldToDouble[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+  def oldToDouble[A](a:Array[A])(implicit m:OldNumeric[A], c:Manifest[A]) = {
     val len = a.length
     val b = Array.ofDim[Double](len)
     var i = 0
@@ -125,7 +125,7 @@ class FromInts extends TestCase[Array[Double]] {
   }
   def direct = Some(directFromInts(LG_DATA))
 
-  def newFromInts[@specialized A:Numeric3:Manifest](a:Array[Int]): Array[A] = {
+  def newFromInts[@specialized A:Numeric:Manifest](a:Array[Int]): Array[A] = {
     val len = a.length
     val b = Array.ofDim[A](len)
     var i = 0
@@ -137,7 +137,7 @@ class FromInts extends TestCase[Array[Double]] {
   }
   def newGeneric = Some(newFromInts[Double](LG_DATA))
 
-  def oldFromInts[A](a:Array[Int])(implicit m:Numeric[A], c:Manifest[A]): Array[A] = {
+  def oldFromInts[A](a:Array[Int])(implicit m:OldNumeric[A], c:Manifest[A]): Array[A] = {
     val len = a.length
     val b = Array.ofDim[A](len)
     var i = 0
@@ -165,7 +165,7 @@ class Addition extends TestCase[Long] {
     Some(s)
   }
 
-  def newAdder[@specialized A:Numeric3](a:A, b:A): A = numeric.plus(a, b)
+  def newAdder[@specialized A:Numeric](a:A, b:A): A = numeric.plus(a, b)
   def newGeneric = {
     var s = 0L
     var i = 0L
@@ -176,7 +176,7 @@ class Addition extends TestCase[Long] {
     Some(s)
   }
 
-  def oldAdder[A](a:A, b:A)(implicit m:Numeric[A]): A = m.plus(a, b)
+  def oldAdder[A](a:A, b:A)(implicit m:OldNumeric[A]): A = m.plus(a, b)
   def oldGeneric = {
     var s = 0L
     var i = 0L
@@ -204,7 +204,7 @@ class Addition2 extends TestCase[Int] {
   }
   def direct = Some(directAdder(LG_DATA))
 
-  def newAdder[@specialized A:Numeric3](a:Array[A]) = {
+  def newAdder[@specialized A:Numeric](a:Array[A]) = {
     var total = numeric.zero
     val len = a.length
     var i = 0
@@ -216,7 +216,7 @@ class Addition2 extends TestCase[Int] {
   }
   def newGeneric = Some(newAdder(LG_DATA))
 
-  def oldAdder[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+  def oldAdder[A](a:Array[A])(implicit m:OldNumeric[A], c:Manifest[A]) = {
     var total = m.zero
     val len = a.length
     var i = 0
@@ -230,13 +230,13 @@ class Addition2 extends TestCase[Int] {
 }
 
 
-// using numeric() instead of implicitly[Numeric3[A]]
-// see Numeric3 numeric()  
+// using numeric() instead of implicitly[Numeric[A]]
+// see Numeric numeric()  
 class Addition3 extends Addition2 {
   override def name = "addition3, using numeric() instead of implicitly()"
 
   override def newGeneric = Some(newSyntaxAdder(LG_DATA))
-  def newSyntaxAdder[@specialized A:Numeric3](a:Array[A]) = { 
+  def newSyntaxAdder[@specialized A:Numeric](a:Array[A]) = { 
     var total = numeric.zero
     val len = a.length
     var i = 0
@@ -249,7 +249,7 @@ class Addition3 extends Addition2 {
 }
 
 
-// testing demo.Numeric3.infixNumericOps, an implicit conversion 
+// testing demo.Numeric.infixNumericOps, an implicit conversion 
 // that allows infix operators to be used
 
 class AdditionInfix extends Addition2 {
@@ -257,7 +257,7 @@ class AdditionInfix extends Addition2 {
 
   override def newGeneric = Some(infixAdder(LG_DATA))
 
-  def infixAdder[@specialized A:Numeric3](a:Array[A]) = {
+  def infixAdder[@specialized A:Numeric](a:Array[A]) = {
     var total = numeric.zero
     val len = a.length
     var i = 0
@@ -284,7 +284,7 @@ class Rescale extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newScale[@specialized A:Numeric3](a:A, num:A, denom:A) = {
+  def newScale[@specialized A:Numeric](a:A, num:A, denom:A) = {
     numeric.div(numeric.times(a, num), denom)
   }
   def newGeneric = {
@@ -326,7 +326,7 @@ class FindMax extends TestCase[Int] {
     Some(curr)
   }
 
-  def newMax[@specialized A:Numeric3](a:A, b:A): A = numeric.max(a, b)
+  def newMax[@specialized A:Numeric](a:A, b:A): A = numeric.max(a, b)
   def newGeneric = {
     var curr = LG_DATA(0)
     var i = 1
@@ -337,7 +337,7 @@ class FindMax extends TestCase[Int] {
     Some(curr)
   }
 
-  def oldMax[A](a:A, b:A)(implicit m:Numeric[A]): A = m.max(a, b)
+  def oldMax[A](a:A, b:A)(implicit m:OldNumeric[A]): A = m.max(a, b)
   def oldGeneric = {
     var curr = LG_DATA(0)
     var i = 1
@@ -365,7 +365,7 @@ class FindMax2 extends TestCase[Int] {
   }
   def direct = directFindMax(LG_DATA)
 
-  def newFindMax[@specialized A:Numeric3:Manifest](a:Array[A]) = {
+  def newFindMax[@specialized A:Numeric:Manifest](a:Array[A]) = {
     var curr = a(0)
     val len = a.length
     var i = 1
@@ -377,7 +377,7 @@ class FindMax2 extends TestCase[Int] {
   }
   def newGeneric = newFindMax(LG_DATA)
 
-  def oldFindMax[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) = {
+  def oldFindMax[A](a:Array[A])(implicit m:OldNumeric[A], c:Manifest[A]) = {
     var curr = a(0)
     val len = a.length
     var i = 1
@@ -412,7 +412,7 @@ class Quicksort extends TestCase[Array[Int]] {
   //}
   def newGeneric = None
 
-  def oldQuicksort[A](a:Array[A])(implicit m:Numeric[A]): Unit = scala.util.Sorting.quickSort(a)
+  def oldQuicksort[A](a:Array[A])(implicit m:OldNumeric[A]): Unit = scala.util.Sorting.quickSort(a)
   def oldGeneric = {
     val data2 = MD_DATA.clone
     oldQuicksort(data2)
@@ -446,7 +446,7 @@ class InsertionSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newIsort[@specialized A:Numeric3:Manifest](a:Array[A]) {
+  def newIsort[@specialized A:Numeric:Manifest](a:Array[A]) {
     var i = 0
     val last = a.length - 1
     while (i < last) {
@@ -468,7 +468,7 @@ class InsertionSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def oldIsort[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) {
+  def oldIsort[A](a:Array[A])(implicit m:OldNumeric[A], c:Manifest[A]) {
     var i = 0
     val last = a.length - 1
     while (i < last) {
@@ -505,7 +505,7 @@ class ArrayAllocator extends TestCase[Array[Array[Int]]] {
   }
   def direct = Some(directAllocator(ML_SIZE, 5, 13))
 
-  def newAllocator[@specialized A:Numeric3:Manifest](num:Int, dim:Int, const:A) = {
+  def newAllocator[@specialized A:Numeric:Manifest](num:Int, dim:Int, const:A) = {
     val outer = Array.ofDim[Array[A]](num)
     var i = 0
     while (i < num) {
@@ -516,7 +516,7 @@ class ArrayAllocator extends TestCase[Array[Array[Int]]] {
   }
   def newGeneric = Some(newAllocator(ML_SIZE, 5, 13))
 
-  def oldAllocator[A](num:Int, dim:Int, const:A)(implicit m:Numeric[A], c:Manifest[A]) = {
+  def oldAllocator[A](num:Int, dim:Int, const:A)(implicit m:OldNumeric[A], c:Manifest[A]) = {
     val outer = Array.ofDim[Array[A]](num)
     var i = 0
     while (i < num) {
@@ -573,7 +573,7 @@ class MergeSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def newMsort[@specialized A:Numeric3:Manifest](a:Array[A]) {
+  def newMsort[@specialized A:Numeric:Manifest](a:Array[A]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2
@@ -614,7 +614,7 @@ class MergeSort extends TestCase[Array[Int]] {
     Some(data2)
   }
 
-  def oldMsort[A](a:Array[A])(implicit m:Numeric[A], c:Manifest[A]) {
+  def oldMsort[A](a:Array[A])(implicit m:OldNumeric[A], c:Manifest[A]) {
     val len = a.length
     if (len > 1) {
       val llen = len / 2

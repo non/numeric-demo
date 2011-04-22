@@ -4,9 +4,9 @@ import scala.math
 
 trait NumericOps[@specialized A] {
   val lhs:A
-  val n:Numeric3[A]
+  val n:Numeric[A]
 
-  def abs(): A = n.abs(lhs)
+  def abs() = n.abs(lhs)
   def compare(rhs:A) = n.compare(lhs, rhs)
   def /(rhs:A) = n.div(lhs, rhs)
   def equiv(rhs:A) = n.equiv(lhs, rhs)
@@ -14,25 +14,25 @@ trait NumericOps[@specialized A] {
   def >=(rhs:A) = n.gteq(lhs, rhs)
   def <(rhs:A) = n.lt(lhs, rhs)
   def <=(rhs:A) = n.lteq(lhs, rhs)
-  def max(rhs:A): A = n.max(lhs, rhs)
-  def min(rhs:A): A = n.min(lhs, rhs)
+  def max(rhs:A) = n.max(lhs, rhs)
+  def min(rhs:A) = n.min(lhs, rhs)
   def -(rhs:A) = n.minus(lhs, rhs)
   def %(rhs:A) = n.mod(lhs, rhs)
   def unary_-() = n.negate(lhs)
   def plus(rhs:A) = n.plus(lhs, rhs)
   def +(rhs:A) = n.plus(lhs, rhs)
-  def signum(): Int = n.signum(lhs)
+  def signum() = n.signum(lhs)
   def *(rhs:A) = n.times(lhs, rhs)
 
-  def toByte(): Byte = n.toByte(lhs)
-  def toShort(): Short = n.toShort(lhs)
-  def toInt(): Int = n.toInt(lhs)
-  def toLong(): Long = n.toLong(lhs)
-  def toFloat(): Float = n.toFloat(lhs)
-  def toDouble(): Double = n.toDouble(lhs)    
+  def toByte() = n.toByte(lhs)
+  def toShort() = n.toShort(lhs)
+  def toInt() = n.toInt(lhs)
+  def toLong() = n.toLong(lhs)
+  def toFloat() = n.toFloat(lhs)
+  def toDouble() = n.toDouble(lhs)
 }
 
-trait Numeric3[@specialized A] extends Convertable[A] {
+trait Numeric[@specialized A] extends ConvertableFrom[A] with ConvertableTo[A] {
   def abs(a:A): A
   def compare(a:A, b:A): Int = if (lt(a, b)) -1 else if (gt(a, b)) 1 else 0
   def div(a:A, b:A): A
@@ -52,23 +52,23 @@ trait Numeric3[@specialized A] extends Convertable[A] {
   def times(a:A, b:A): A
   def zero(): A
 
-  def fromType[@specialized B](b:B)(implicit c:Convertable[B]): A
+  def fromType[@specialized B](b:B)(implicit c:ConvertableFrom[B]): A
 
-  implicit def mkNumericOps(x:A): NumericOps[A] = new NumericOps[A] {
-    val lhs = x
-    val n = Numeric3.this
+  implicit def mkNumericOps(a:A): NumericOps[A] = new NumericOps[A] {
+    val lhs = a
+    val n = Numeric.this
   }
 }
 
-object Numeric3 {
-  implicit def infixNumericOps[T](x:T)(implicit num:Numeric3[T]):NumericOps[T] = new NumericOps[T] {
-    val lhs = x
+object Numeric {
+  implicit def infixNumericOps[T](a:T)(implicit num:Numeric[T]):NumericOps[T] = new NumericOps[T] {
+    val lhs = a
     val n = num
   }
 
-  def numeric[A:Numeric3]() = implicitly [Numeric3[A]]
+  def numeric[A:Numeric]() = implicitly [Numeric[A]]
  
-  trait Numeric3Int extends Numeric3[Int] with Convertable.ConvertableInt {
+  trait NumericInt extends Numeric[Int] with ConvertableFrom.ConvertableFromInt with ConvertableTo.ConvertableToInt {
     def abs(a:Int): Int = scala.math.abs(a)
     def div(a:Int, b:Int): Int = a / b
     def equiv(a:Int, b:Int): Boolean = a == b
@@ -86,11 +86,11 @@ object Numeric3 {
     def times(a:Int, b:Int): Int = a * b
     def zero: Int = 0
   
-    def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toInt(b)
+    def fromType[@specialized B](b:B)(implicit c:ConvertableFrom[B]) = c.toInt(b)
   }
-  implicit object Numeric3Int extends Numeric3Int
+  implicit object NumericInt extends NumericInt
   
-  trait Numeric3Long extends Numeric3[Long] with Convertable.ConvertableLong {
+  trait NumericLong extends Numeric[Long] with ConvertableFrom.ConvertableFromLong with ConvertableTo.ConvertableToLong {
     def abs(a:Long): Long = scala.math.abs(a)
     def div(a:Long, b:Long): Long = a / b
     def equiv(a:Long, b:Long): Boolean = a == b
@@ -108,11 +108,11 @@ object Numeric3 {
     def times(a:Long, b:Long): Long = a * b
     def zero: Long = 0L
   
-    def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toLong(b)
+    def fromType[@specialized B](b:B)(implicit c:ConvertableFrom[B]) = c.toLong(b)
   }
-  implicit object Numeric3Long extends Numeric3Long
+  implicit object NumericLong extends NumericLong
   
-  trait Numeric3Float extends Numeric3[Float] with Convertable.ConvertableFloat {
+  trait NumericFloat extends Numeric[Float] with ConvertableFrom.ConvertableFromFloat with ConvertableTo.ConvertableToFloat {
     def abs(a:Float): Float = scala.math.abs(a)
     def div(a:Float, b:Float): Float = a / b
     def equiv(a:Float, b:Float): Boolean = a == b
@@ -130,11 +130,11 @@ object Numeric3 {
     def times(a:Float, b:Float): Float = a * b
     def zero: Float = 0.0F
   
-    def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toFloat(b)
+    def fromType[@specialized B](b:B)(implicit c:ConvertableFrom[B]) = c.toFloat(b)
   }
-  implicit object Numeric3Float extends Numeric3Float
+  implicit object NumericFloat extends NumericFloat
   
-  trait Numeric3Double extends Numeric3[Double] with Convertable.ConvertableDouble {
+  trait NumericDouble extends Numeric[Double] with ConvertableFrom.ConvertableFromDouble with ConvertableTo.ConvertableToDouble {
     def abs(a:Double): Double = scala.math.abs(a)
     def div(a:Double, b:Double): Double = a / b
     def equiv(a:Double, b:Double): Boolean = a == b
@@ -152,8 +152,8 @@ object Numeric3 {
     def times(a:Double, b:Double): Double = a * b
     def zero: Double = 0.0
   
-    def fromType[@specialized B](b:B)(implicit c:Convertable[B]) = c.toDouble(b)
+    def fromType[@specialized B](b:B)(implicit c:ConvertableFrom[B]) = c.toDouble(b)
   }
-  implicit object Numeric3Double extends Numeric3Double
+  implicit object NumericDouble extends NumericDouble
 
 }
