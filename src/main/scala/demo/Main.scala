@@ -3,6 +3,7 @@ package demo
 import scala.math.max
 import scala.math.{Numeric => OldNumeric, Integral}
 import scala.util.Random
+import scala.testing.Benchmark
 
 import Console.printf
 
@@ -36,35 +37,25 @@ trait TestCase[A] {
   // implemented using the built-in Numeric trait
   def oldGeneric: Option[A]
 
-  // race our various implementations and display results
-  def test {
-    println(name)
+  object CaseDirect extends Benchmark { def run = direct }
+  object CaseGeneric extends Benchmark { def run = newGeneric }
+  object CaseOld extends Benchmark { def run = oldGeneric }
 
-    // warm up run
-    this.direct
-    this.newGeneric
-    this.oldGeneric
+  val cases = List(CaseDirect, CaseGeneric, CaseOld)
 
-    // warm up run #2
-    this.direct
-    this.newGeneric
-    this.oldGeneric
-
-    // timed run
-    time("direct", direct)
-    time("new-numeric", newGeneric)
-    time("old-numeric", oldGeneric)
+  def runCase(c:Benchmark, n:Int, m:Int) = {
+    c.multiplier = m
+    val results = c.runBenchmark(n)
+    //println(results)
+    val total = results.tail.foldLeft(0.0)(_ + _)
+    val nruns = (n - 1) * m
+    total / nruns
   }
 
-  // used to time a particular implementation
-  def time[A](label:String, x: => A) {
-    val start = System.currentTimeMillis
-    val r = x
-    val duration = System.currentTimeMillis - start
-    r match {
-      case None => printf("  %-12s     n/a\n", label)
-      case Some(a) => printf("  %-12s %4d ms\n", label, duration)
-    }
+  def run(n:Int, m:Int) = cases.map(runCase(_, n, m))
+
+  def test() {
+    println(run(5, 5).foldLeft("%-20s".format(name))("%s  %7.2fms".format(_, _)))
   }
 }
 
@@ -152,7 +143,7 @@ class FromInts extends TestCase[Array[Double]] {
 
 // Adding many A values together, where A=Long
 class Addition extends TestCase[Long] {
-  def name = "addition"
+  def name = "add1"
 
   def directAdder(a:Long, b:Long) = a + b
   def direct = {
@@ -190,7 +181,7 @@ class Addition extends TestCase[Long] {
 
 // adding an Array[A] together, where A=Int
 class Addition2 extends TestCase[Int] {
-  def name = "addition2"
+  def name = "add2"
 
   def directAdder(a:Array[Int]) = {
     var total = 0
@@ -233,7 +224,7 @@ class Addition2 extends TestCase[Int] {
 // using numeric() instead of implicitly[Numeric[A]]
 // see Numeric numeric()  
 class Addition3 extends Addition2 {
-  override def name = "addition3, using numeric() instead of implicitly()"
+  override def name = "add, w/ numeric()"
 
   override def newGeneric = Some(newSyntaxAdder(LG_DATA))
   def newSyntaxAdder[@specialized A:Numeric](a:Array[A]) = { 
@@ -253,7 +244,7 @@ class Addition3 extends Addition2 {
 // that allows infix operators to be used
 
 class AdditionInfix extends Addition2 {
-  override def name = "addition with infix"
+  override def name = "add w/ infix"
 
   override def newGeneric = Some(infixAdder(LG_DATA))
 
