@@ -1,5 +1,8 @@
 This is a basic demo I've written to show some basic improvements in speed we
-can get with a specialized Numeric trait.
+can get with a specialized Numeric trait. I hope to release this as
+an independent jar that people can plug in to do fast generic math, and
+eventually I hope to get code like this integrated into the mainline
+scala.math.Numeric trait.  
 
 You can run the performance tests with "sbt run"
 
@@ -20,3 +23,7 @@ implements the comparison methods. I will try to do some cleanup.
 2. It does not implement Integral/Fractional. I think that leaving
 division/modulo off of Numeric is a mistake, and don't think that
 Integral/Fractional is a useful distinction for many kinds of generic math.
+
+3. It's in a different package (xyz -- I haven't figured out a good package
+name yet) instead of scala.math.
+ 
