@@ -88,7 +88,7 @@ trait TestCase {
     def mkp(a:Double, b:Double) = if (a == 0.0 || b == 0.0) 0.0 else a / b
 
     val percs = List(mkp(t2, t1), mkp(t3, t1), mkp(t3, t2))
-    val pstrs = percs.map(p => if(p == 0.0) "    n/a" else "%5.2fx".format(p))
+    val pstrs = percs.map(p => if(p == 0.0) "   n/a" else "%5.2fx".format(p))
 
     val fields = ("%-20s".format(name) :: tstrs) ++ ("/" :: pstrs)
     println(fields.reduceLeft(_ + "  " + _))
