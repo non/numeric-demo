@@ -1,21 +1,22 @@
 This is a basic demo I've written to show some basic improvements in speed we
-can get with a specialized Numeric trait. The file Numeric3.scala contains a
-fully specialized trait that already shows significant improvements over
-Numeric.
+can get with a specialized Numeric trait.
 
 You can run the performance tests with "sbt run"
 
-Limitations:
+The output shows the speed (in ms) of a direct implementation (without
+generics), a new implementation (using my own Numeric) and an old
+implementation (using the builtin Numeric).
 
-1. Other packages (Ordering, scala.util.Sorting, etc.) also need specializion
-(see the Quicksort performance test and Numeric2 for more information).
-Numeric3 does not currently extend Ordering. 
+  n:d is how new compares to direct
+  o:d is how old compares to direct
+  o:n is how old compares to new
 
-2. The notation for using the specialized Numeric can be annoying.
+It's worth noting that while very similar my Numeric trait has some differences
+from scala.math.Numeric. The most significant ones are:
 
-3. Allocating generic arrays seems to be about 4x slower.
+1. It does not inherit from the Ordering typeclass, but rather directly
+implements the comparison methods. I will try to do some cleanup.
 
-4. Using an implicit to support infix math operators is nice but currently
-seems to impose a serious performance penalty. There have been reports that
-escape analysis should be able to detect and optimize this away, but so far
-this hasn't worked.  
+2. It does not implement Integral/Fractional. I think that leaving
+division/modulo off of Numeric is a mistake, and don't think that
+Integral/Fractional is a useful distinction for many kinds of generic math.
