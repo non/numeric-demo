@@ -1,4 +1,4 @@
-package demo
+package com.azavea.math
 
 // this package is used to provide concrete implementations of the conversions
 // between numeric primitives. the idea here is that the Numeric trait can

@@ -1,4 +1,4 @@
-package main2
+package com.azavea.math
 
 import scala.math.max
 import scala.math.{Numeric => OldNumeric, Integral, Fractional, min, max}
@@ -9,8 +9,7 @@ import java.io.{FileWriter, PrintWriter}
 
 import Console.printf
 
-import demo.Numeric
-import demo.Numeric.{numeric, infixNumericOps}
+import Numeric.{numeric, infixNumericOps}
 
 // define some constant sizes and random arrays that we can use for our various
 // performance tests. if things run way too slow or way too fast you can try
@@ -542,89 +541,79 @@ class InfixAdderFloat extends InfixAdder with BaseAdderFloat { def name = "infix
 class InfixAdderDouble extends InfixAdder with BaseAdderDouble{ def name = "infix-adder-double" }
 
 
-// Finding the maximum value in Array[A], where A=Int
-class FindMax extends TestCase {
-  def name = "find-max"
-
-  def directMax(a:Int, b:Int) = scala.math.max(a, b)
-  def direct = {
-    var curr = LG_DATA(0)
+// ==========================================================
+trait FindMax extends TestCase {
+  def directMaxInt(a:Array[Int]) = {
+    var curr = a(0)
     var i = 1
-    while (i < LG_SIZE) {
-      curr = directMax(curr, LG_DATA(i))
-      i += 1
-    }
-    Option(curr)
+    while (i < a.length) { curr = scala.math.max(curr, a(i)); i += 1 }
+    curr
   }
 
-  def newMax[@specialized A:Numeric](a:A, b:A): A = numeric.max(a, b)
-  def newGeneric = {
-    var curr = LG_DATA(0)
+  def directMaxLong(a:Array[Long]) = {
+    var curr = a(0)
     var i = 1
-    while (i < LG_SIZE) {
-      curr = newMax(curr, LG_DATA(i))
-      i += 1
-    }
-    Option(curr)
+    while (i < a.length) { curr = scala.math.max(curr, a(i)); i += 1 }
+    curr
   }
 
-  def oldMax[A:OldNumeric](a:A, b:A): A = {
-    val m = implicitly[OldNumeric[A]]
-    m.max(a, b)
-  }
-  def oldGeneric = {
-    var curr = LG_DATA(0)
+  def directMaxFloat(a:Array[Float]) = {
+    var curr = a(0)
     var i = 1
-    while (i < LG_SIZE) {
-      curr = oldMax(curr, LG_DATA(i))
-      i += 1
-    }
-    Option(curr)
+    while (i < a.length) { curr = scala.math.max(curr, a(i)); i += 1 }
+    curr
+  }
+
+  def directMaxDouble(a:Array[Double]) = {
+    var curr = a(0)
+    var i = 1
+    while (i < a.length) { curr = scala.math.max(curr, a(i)); i += 1 }
+    curr
+  }
+
+  def newGenericMax[@specialized A:Numeric](a:Array[A]) = {
+    var curr = a(0)
+    var i = 1
+    while (i < a.length) { curr = numeric.max(curr, a(i)); i += 1 }
+    curr
+  }
+
+  def oldGenericMax[A:OldNumeric](a:Array[A]) = {
+    val n = implicitly[OldNumeric[A]]
+    var curr = a(0)
+    var i = 1
+    while (i < a.length) { curr = n.max(curr, a(i)); i += 1 }
+    curr
   }
 }
 
-// Finding the maximum value in Array[A], where A=Int
-class FindMax2 extends TestCase {
-  def name = "find-max2"
-
-  def directFindMax(a:Array[Int]) = {
-    var curr = a(0)
-    val len = a.length
-    var i = 1
-    while (i < len) {
-      curr = max(curr, a(i))
-      i += 1
-    }
-    Option(curr)
-  }
-  def direct = directFindMax(LG_DATA)
-
-  def newFindMax[@specialized A:Numeric:Manifest](a:Array[A]) = {
-    var curr = a(0)
-    val len = a.length
-    var i = 1
-    while (i < len) {
-      curr = numeric.max(curr, a(i))
-      i += 1
-    }
-    Option(curr)
-  }
-  def newGeneric = newFindMax(LG_DATA)
-
-  def oldFindMax[A:OldNumeric:Manifest](a:Array[A]) = {
-    val m = implicitly[OldNumeric[A]]
-    var curr = a(0)
-    val len = a.length
-    var i = 1
-    while (i < len) {
-      curr = m.max(curr, a(i))
-      i += 1
-    }
-    Option(curr)
-  }
-  def oldGeneric = oldFindMax(LG_DATA)
+class FindMaxInt extends FindMax {
+  def name = "find-max-int"
+  def direct() = Some(directMaxInt(largeIntArray))
+  def newGeneric() = Some(newGenericMax(largeIntArray))
+  def oldGeneric() = Some(oldGenericMax(largeIntArray))
 }
 
+class FindMaxLong extends FindMax {
+  def name = "find-max-long"
+  def direct() = Some(directMaxLong(largeLongArray))
+  def newGeneric() = Some(newGenericMax(largeLongArray))
+  def oldGeneric() = Some(oldGenericMax(largeLongArray))
+}
+
+class FindMaxFloat extends FindMax {
+  def name = "find-max-float"
+  def direct() = Some(directMaxFloat(largeFloatArray))
+  def newGeneric() = Some(newGenericMax(largeFloatArray))
+  def oldGeneric() = Some(oldGenericMax(largeFloatArray))
+}
+
+class FindMaxDouble extends FindMax {
+  def name = "find-max-double"
+  def direct() = Some(directMaxDouble(largeDoubleArray))
+  def newGeneric() = Some(newGenericMax(largeDoubleArray))
+  def oldGeneric() = Some(oldGenericMax(largeDoubleArray))
+}
 
 // ================================================================
 trait BaseSort extends TestCase {
@@ -1117,16 +1106,21 @@ object Main {
                    new AdderLong,
                    new AdderFloat,
                    new AdderDouble),
-
+                   
                    List(new IntArrayAdder,
                    new LongArrayAdder,
                    new FloatArrayAdder,
                    new DoubleArrayAdder),
-
+                   
                    List(new IntArrayRescale,
                    new LongArrayRescale,
                    new FloatArrayRescale,
                    new DoubleArrayRescale),
+
+                   List(new FindMaxInt,
+                   new FindMaxLong,
+                   new FindMaxFloat,
+                   new FindMaxDouble),
 
                    List(new QuicksortInt,
                    new QuicksortLong,

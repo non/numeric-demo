@@ -1,4 +1,4 @@
-package demo
+package com.azavea.math
 
 import scala.math.{abs, min, max, pow}
 

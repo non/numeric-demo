@@ -1,4 +1,4 @@
-package demo
+package com.azavea.math
 
 trait NumericOps[@specialized A] {
   val lhs:A
