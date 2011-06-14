@@ -296,15 +296,10 @@ trait NumericDouble extends Numeric[Double] with ConvertableFromDouble with Conv
 object Numeric {
   implicit def infixNumericOps[@specialized A:Numeric](a:A):NumericOps[A] = new NumericOpsCls(a)
 
-  //implicit def convertToDouble[@specialized A:Numeric](a:A) = a.toDouble
-  implicit def convertToDouble[A](a:A)(implicit n:Numeric[A]):Double = n.toDouble(a)
-  implicit def convertFromInt[A](x:Int)(implicit n:Numeric[A]):A = n.fromInt(x)
-
   def numeric[@specialized A:Numeric]() = implicitly[Numeric[A]]
 
   implicit object NumericInt extends NumericInt
   implicit object NumericLong extends NumericLong
   implicit object NumericFloat extends NumericFloat
   implicit object NumericDouble extends NumericDouble
-
 }
