@@ -5,6 +5,8 @@ import scala.math.{Numeric => OldNumeric, Integral, Fractional, min, max}
 import scala.util.Random
 import scala.testing.Benchmark
 
+import java.io.{FileWriter, PrintWriter}
+
 import Console.printf
 
 import demo.Numeric
@@ -50,7 +52,7 @@ object Constant {
   val largeFloatArray = Array.ofDim[Float](largeSize).map(i => Random.nextFloat())
   val largeDoubleArray = Array.ofDim[Double](largeSize).map(i => Random.nextDouble())
 
-  val createHTML = false
+  val createHTML = true
 }
 import Constant._
 
@@ -97,14 +99,16 @@ trait TestCase {
   else if (p < 8.8) "bad"
   else "awful"
 
-  def test() {
+  def test(p:Option[PrintWriter]) {
     val results = run(2, 8)
 
     val times = results.map(_.tavg)
-    val tstrs = if (Constant.createHTML) {
-      times.map("%.1f".format(_))
-    } else {
-      times.map("%6.1fms".format(_))
+    val tstrs = times.map {
+      t => if (t < 0.1) {
+        "     n/a"
+      } else {
+        "%6.1fms".format(t)
+      }
     }
 
     val List(t1, t2, t3) = times
@@ -112,20 +116,30 @@ trait TestCase {
     def mkp(a:Double, b:Double) = if (a == 0.0 || b == 0.0) 0.0 else a / b
 
     val percs = List(mkp(t2, t1), mkp(t3, t1), mkp(t3, t2))
-    val pstrs = percs.map(p => if(p == 0.0) "   n/a" else "%5.2fx".format(p))
+    val pstrs = percs.map(p => if(p < 0.01) "   n/a" else "%5.2fx".format(p))
 
-    if (Constant.createHTML) {
-      val a = "  <tr><td class='name'>%s</td><td class='base'>%s</td>".format(name, tstrs(0))
-      val s1 = percStatus(percs(0))
-      val b = "<td class='%s'>%s</td><td class='%s'>%s</td>".format(s1, tstrs(1), s1, pstrs(0))
-      val s2 = percStatus(percs(1))
-      val c = "<td class='%s'>%s</td><td class='%s'>%s</td></tr>".format(s2, tstrs(2), s2, pstrs(1))
-      println(a + b + c)
-      
-    } else {
-      val fields = ("%-24s".format(name) :: tstrs) ++ ("/" :: pstrs)
-      println(fields.reduceLeft(_ + "  " + _))
+    p match {
+      case Some(pw) => {
+        val a = "  <tr><td class='name'>%s</td><td class='base'>%.1f</td>".format(name, times(0))
+        val s1 = percStatus(percs(0))
+        val b = if (times(1) < 0.1) {
+          "<td class='na'></td><td class='na'></td>"
+        } else {
+          "<td class='%s'>%.1f</td><td class='%s'>%s</td>".format(s1, times(1), s1, pstrs(0))
+        }
+        val s2 = percStatus(percs(1))
+        val c = if (times(2) < 0.1) {
+          "<td class='na'></td><td class='na'></td>"
+        } else {
+          "<td class='%s'>%.1f</td><td class='%s'>%s</td></tr>".format(s2, times(2), s2, pstrs(1))
+        }
+        pw.println(a + b + c)
+      }
+      case _ => {}
     }
+
+    val fields = ("%-24s".format(name) :: tstrs) ++ ("/" :: pstrs)
+    println(fields.reduceLeft(_ + "  " + _))
   }
 }
 
@@ -1020,7 +1034,7 @@ trait MergeSort extends BaseSort {
           a(k) = left(i); i += 1
         } else if (i == llen) {
           a(k) = right(j); j += 1
-        } else if (left(i) < right(j)) { // XXX
+        } else if (numeric.lt(left(i), right(j))) {
           a(k) = left(i); i += 1
         } else {
           a(k) = right(j); j += 1
@@ -1094,53 +1108,104 @@ class MergeSortDouble extends MergeSort {
 
 
 object Main {
-  val tests = List(new FromIntToInt,
-                   // new FromIntToLong,
-                   // new FromIntToFloat,
-                   // new FromIntToDouble,
+  val tests = List(List(new FromIntToInt,
+                   new FromIntToLong,
+                   new FromIntToFloat,
+                   new FromIntToDouble),
 
-                   // new AdderInt,
-                   // new AdderLong,
-                   // new AdderFloat,
-                   // new AdderDouble,
+                   List(new AdderInt,
+                   new AdderLong,
+                   new AdderFloat,
+                   new AdderDouble),
 
-                   // new IntArrayAdder,
-                   // new LongArrayAdder,
-                   // new FloatArrayAdder,
-                   // new DoubleArrayAdder,
+                   List(new IntArrayAdder,
+                   new LongArrayAdder,
+                   new FloatArrayAdder,
+                   new DoubleArrayAdder),
 
-                   // new IntArrayRescale,
-                   // new LongArrayRescale,
-                   // new FloatArrayRescale,
-                   // new DoubleArrayRescale,
+                   List(new IntArrayRescale,
+                   new LongArrayRescale,
+                   new FloatArrayRescale,
+                   new DoubleArrayRescale),
 
-                   // new QuicksortInt,
-                   // new QuicksortLong,
-                   // new QuicksortFloat,
-                   // new QuicksortDouble,
+                   List(new QuicksortInt,
+                   new QuicksortLong,
+                   new QuicksortFloat,
+                   new QuicksortDouble),
 
-                   // new ArrayAllocatorInt,
-                   // new ArrayAllocatorLong,
-                   // new ArrayAllocatorFloat,
-                   // new ArrayAllocatorDouble,
+                   List(new ArrayAllocatorInt,
+                   new ArrayAllocatorLong,
+                   new ArrayAllocatorFloat,
+                   new ArrayAllocatorDouble),
 
-                   // new InsertionSortInt,
-                   // new InsertionSortLong,
-                   // new InsertionSortFloat,
-                   // new InsertionSortDouble,
+                   List(new InsertionSortInt,
+                   new InsertionSortLong,
+                   new InsertionSortFloat,
+                   new InsertionSortDouble),
 
-                   // new MergeSortInt,
-                   // new MergeSortLong,
-                   // new MergeSortFloat,
-                   // new MergeSortDouble,
+                   List(new MergeSortInt,
+                   new MergeSortLong,
+                   new MergeSortFloat,
+                   new MergeSortDouble),
 
-                   // new InfixAdderInt,
-                   // new InfixAdderLong,
-                   // new InfixAdderFloat,
-                   new InfixAdderDouble)
+                   List(new InfixAdderInt,
+                   new InfixAdderLong,
+                   new InfixAdderFloat,
+                   new InfixAdderDouble))
+
+  def getHTMLHeader() = """
+<html>
+ <head>
+  <style type="text/css">
+    td { text-align: right; padding: 4px; }
+    td { border: 1px solid black; padding: 4px; }
+    thead { background-color: lightgrey; }
+
+    .na { border: 0px; }
+    .base { border: 0px; }
+    .sep { border: 0px; colspan="6" }
+
+    .name { background-color: lightgrey; }
+    .great { background-color: #99ccff; }
+    .good { background-color: #99ff99; }
+    .ok { background-color: #ccff99; }
+    .poor { background-color: #ffff99; }
+    .bad { background-color: #ffcc99; }
+    .awful { background-color: #ff9999; }
+  </style>
+ </head>
+ <body>
+  <table>
+
+  <thead>
+   <tr><td>test</td><td>direct (ms)</td><td colspan="2">new (ms)</td><td colspan="2">old (ms)</td></tr>
+  </thead>
+  """
+
+  def getHTMLFooter() = "  </table>\n </body>\n</html>\n"
 
   def main(args:Array[String]): Unit = {
-    printf("%-24s  %8s  %8s  %8s  /  %6s  %6s  %6s\n", "test", "direct", "new", "old", "n:d", "o:d", "o:n")
-    tests.foreach(_.test)
+    if (Constant.createHTML) { 
+      println("creating benchmark.html...")
+      printf("%-24s  %8s  %8s  %8s  /  %6s  %6s  %6s\n", "test", "direct", "new", "old", "n:d", "o:d", "o:n")
+
+      val p = new PrintWriter(new FileWriter("benchmark.html"))
+
+      p.println(getHTMLHeader())
+      tests.foreach {
+        group => {
+          p.println("<tr><td class='sep' /></tr>\n")
+          group.foreach(_.test(Some(p)))
+        }
+      }
+      p.println(getHTMLFooter())
+      p.close()
+
+    } else {
+      printf("%-24s  %8s  %8s  %8s  /  %6s  %6s  %6s\n", "test", "direct", "new", "old", "n:d", "o:d", "o:n")
+      tests.foreach {
+        group => group.foreach(_.test(None))
+      }
+    }
   }
 }
