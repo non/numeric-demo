@@ -4,7 +4,9 @@ an independent jar that people can plug in to do fast generic math, and
 eventually I hope to get code like this integrated into the mainline
 scala.math.Numeric trait.  
 
-You can run the performance tests with "sbt run"
+=== BENCHMARKS ===
+
+You can run the performance tests with "sbt run".
 
 The output shows the speed (in ms) of a direct implementation (without
 generics), a new implementation (using my own Numeric) and an old
@@ -14,16 +16,36 @@ implementation (using the builtin Numeric).
   o:d is how old compares to direct
   o:n is how old compares to new
 
-It's worth noting that while very similar my Numeric trait has some differences
-from scala.math.Numeric. The most significant ones are:
+It also creates a benchmark.html file which colorizes the output.
+
+=== RESULTS ===
+
+There are some interesting results:
+
+1. scala.math.Numeric performs terribly on integral types but does a bit better
+on fractional ones.
+
+2. scala.util.Sorting.quickSort lacks a direct Long implementation, so using it
+with Longs is ~5x slower than Int, Float or Double.
+
+3. The specialized Numeric class basically performs as well as direct except
+when using infix operators. The current Numeric is clearly inappropriate for
+any application where performance is important.
+
+=== NUMERIC DIFFERENCES ===
+
+While very similar to scala.math.Numeric, my Numeric trait has some
+differences. The most significant ones are: 
 
 1. It does not inherit from the Ordering typeclass, but rather directly
-implements the comparison methods. I will try to do some cleanup.
+implements the comparison methods. I will try to do some cleanup on this and
+make it more compatible with Ordering, but it was important to me that the
+comparison methods are also specialized.  
 
 2. It does not implement Integral/Fractional. I think that leaving
-division/modulo off of Numeric is a mistake, and don't think that
-Integral/Fractional is a useful distinction for many kinds of generic math.
+division/modulo off of Numeric is a mistake, and don't think that forcing users
+to use Integral/Fractional is a good idea. Given that Scala uses the same
+symbol (/) to mean both "integer division" and "true division" it seems clear
+that Numeric can too. 
 
-3. It's in a different package (xyz -- I haven't figured out a good package
-name yet) instead of scala.math.
- 
+3. It's in a different package (com.azavea.math).
